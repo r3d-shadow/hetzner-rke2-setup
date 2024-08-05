@@ -1,0 +1,13 @@
+{
+    "name": "hetzner",
+    "main": "index.ts",
+    "devDependencies": {
+        "@types/node": "^18",
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "@pulumi/hcloud": "^1.19.1",
+        "@pulumi/pulumi": "^3.113.0",
+        "dotenv": "^16.4.5"
+    }
+}
