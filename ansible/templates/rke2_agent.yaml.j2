@@ -1,0 +1,11 @@
+token: {{ token }}
+server: https://{{ server }}:9345
+
+{% if node_labels %}
+node-label:
+{% for label in node_labels %}
+  - "{{ label }}"
+{% endfor %}
+{% endif %}
+
+node-ip: {{ node_ip }}

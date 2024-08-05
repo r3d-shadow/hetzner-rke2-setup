@@ -1,0 +1,12 @@
+token: {{ token }}
+
+{% if node_labels %}
+node-label:
+{% for label in node_labels %}
+  - "{{ label }}"
+{% endfor %}
+{% endif %}
+disable:
+  - rke2-ingress-nginx
+node-taint:
+  CriticalAddonsOnly=true:NoSchedule

@@ -1,0 +1,57 @@
+---
+- name: Install RKE2 server on master node
+  hosts: rke2_servers
+  become: yes
+  vars_files:
+    - ../vars.yaml
+  tasks:
+    - name: Print the hostname
+      debug:
+        msg: "Installing RKE2 on host: {{ inventory_hostname }}: {{ ansible_host }}"
+
+    - name: Create RKE2 config directory
+      file:
+        path: /etc/rancher/rke2
+        state: directory
+        owner: root
+        group: root
+
+    - name: Create RKE2 config file with token
+      template:
+        src: ../templates/rke2_server.yaml.j2
+        dest: /etc/rancher/rke2/config.yaml
+        owner: root
+        group: root
+      vars:
+        token: "{{ RKE2_MASTER_TOKEN }}"
+        node_labels: "{{ hostvars[inventory_hostname].vars.node_labels }}"
+
+    - name: Download RKE2 install script
+      get_url:
+        url: https://get.rke2.io
+        dest: /tmp/get_rke2.sh
+        mode: '0755'
+
+    - name: Check if RKE2 server service exists
+      stat: path=/usr/local/lib/systemd/system/rke2-server.service
+      register: rke2_server_service_status
+      ignore_errors: yes
+
+    - name: RKE2 server service
+      debug:
+        msg: "{{ rke2_server_service_status.stat.exists }}"
+
+    - name: Install RKE2 server if service is not present
+      shell: |
+        INSTALL_RKE2_TYPE=server INSTALL_RKE2_VERSION={{ RKE2_VERSION }} sh /tmp/get_rke2.sh
+        systemctl enable rke2-server.service
+        systemctl start rke2-server.service
+      when: not rke2_server_service_status.stat.exists
+
+    - name: Verify RKE2 server installation
+      command: /var/lib/rancher/rke2/bin/kubectl version --client
+      register: kubectl_version
+
+    - name: Print kubectl version
+      debug:
+        msg: "kubectl version: {{ kubectl_version.stdout }}"

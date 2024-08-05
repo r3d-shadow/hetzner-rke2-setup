@@ -1,0 +1,51 @@
+---
+- name: Install RKE2 agent on agent nodes
+  hosts: rke2_agents
+  become: yes
+  vars_files:
+    - ../vars.yaml
+  tasks:
+    - name: Print the hostname
+      debug:
+        msg: "Installing RKE2 on host: {{ inventory_hostname }}: {{ ansible_host }}"
+
+    - name: Create RKE2 config directory
+      file:
+        path: /etc/rancher/rke2
+        state: directory
+        owner: root
+        group: root
+
+    - name: Create RKE2 config file with token
+      template:
+        src: ../templates/rke2_agent.yaml.j2
+        dest: /etc/rancher/rke2/config.yaml
+        owner: root
+        group: root
+      vars:
+        token: "{{ RKE2_MASTER_TOKEN }}"
+        node_labels: "{{ hostvars[inventory_hostname].vars.node_labels }}"
+        server: "{{ hostvars['rke2_server0'].ansible_host }}"
+        node_ip: "{{ hostvars[inventory_hostname].ansible_host }}"
+
+    - name: Download RKE2 install script
+      get_url:
+        url: https://get.rke2.io
+        dest: /tmp/get_rke2.sh
+        mode: '0755'
+
+    - name: Check if RKE2 agent service exists
+      stat: path=/usr/local/lib/systemd/system/rke2-agent.service
+      register: rke2_agent_service_status
+      ignore_errors: yes
+
+    - name: RKE2 agent service
+      debug:
+        msg: "{{ rke2_agent_service_status.stat.exists }}"
+
+    - name: Install RKE2 agent if service is not present
+      shell: |
+        INSTALL_RKE2_TYPE=agent sh /tmp/get_rke2.sh
+        systemctl enable rke2-agent.service
+        systemctl start rke2-agent.service
+      when: not rke2_agent_service_status.stat.exists
